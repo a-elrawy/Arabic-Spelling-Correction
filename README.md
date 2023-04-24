@@ -1,9 +1,9 @@
-# Spelling Corrector to CODA standard
-This is a Python script for converting Arabic text to CODA standard using pre-trained transformer models.
+# Spelling Corrector to CODA / MSA standard
+This is a Python script for converting Arabic text to CODA or MSA standard using pre-trained transformer models.
 
 ## Introduction
-This is a spelling corrector to the CODA standard. It uses the [CODA MADARA corpus](https://camel.abudhabi.nyu.edu/madar-coda-corpus/) 
-to train a spelling corrector. The corrector is based on transformer architecture. by fine-tuning [AraBART](https://arxiv.org/abs/2203.10945) and
+This is a spelling corrector to the CODA or MSA standard. It uses the [CODA MADARA corpus](https://camel.abudhabi.nyu.edu/madar-coda-corpus/) 
+and [QALB](https://camel.abudhabi.nyu.edu/qalb-shared-task-2015/) to train a spelling corrector. The corrector is based on transformer architecture. by fine-tuning [AraBART](https://arxiv.org/abs/2203.10945) and
 [AraT5](https://arxiv.org/abs/2109.12068) models.
 
 ## Requirements
@@ -19,7 +19,7 @@ This script requires the following Python packages:
 
 To install these packages, run the following command:
 
-```
+```bash
 pip install -r requirements.txt
 ```
 
@@ -28,8 +28,8 @@ pip install -r requirements.txt
 
 To run the script, open a terminal and navigate to the directory containing the script. Then, run the following command:
 
-```
-python coda_conversion.py [OPTIONS]
+```bash
+python main.py [OPTIONS]
 ```
 
 The following options are available:
@@ -48,31 +48,37 @@ The following options are available:
 
 For example, to run the script with the default hyperparameters and log the training process to WandB, run the following command:
 
-```
-python coda_conversion.py --wandb
+```bash
+python main.py --wandb
 ```
 
 To train the model for 20 epochs, run the following command:
 
-```
-python coda_conversion.py --num_epochs 20
+```bash
+python main.py --num_epochs 20
 ```
 
 To run the script in test mode, run the following command:
 
-```
-python coda_conversion.py --test
+```bash
+python main.py --test
 ```
 
 To specify a different model, run the following command:
 
+```bash
+python main.py --model_name UBC-NLP/AraT5-base
 ```
-python coda_conversion.py --model_name UBC-NLP/AraT5-base
+
+To convert to MSA instead, run the following command:
+    
+```bash
+python main.py --path qalb-corpus
 ```
 
 To convert a specific sentence, run the following command: 
 
-```
-python coda_conversion.py --sentence "الجملة العربية التي تريد تحويلها او تصحيحها"
+```bash
+python main.py --sentence "الجملة العربية التي تريد تحويلها او تصحيحها"
 ```
 
