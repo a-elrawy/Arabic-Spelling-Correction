@@ -17,6 +17,9 @@ def main(config):
     optimizer = create_optimizer(config['optimizer'], config['learning_rate'], model.parameters())
     criterion = torch.nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id)
 
+    if config['wandb']:
+        wandb.init(project='CODA-conversion')
+        wandb.config.update(config)
     # Load the data loaders
     train_loader, val_loader, test_loader = get_loaders(path=PATH, batch_size=config['batch_size'], shuffle=True)
     trainer = Trainer(model, optimizer, criterion, train_loader, tokenizer)
@@ -29,11 +32,11 @@ def main(config):
             trainer.evaluate(test_loader)
 
     else:
-        trainer.train(val_loader, num_epochs=config['num_epochs'])
+        trainer.train(val_loader, num_epochs=config['num_epochs'], wandb_log=config['wandb'])
         torch.save(model.state_dict(), f"{model_path}.pt")
 
 
-def wandb_log():
+def test_config():
     wandb.login()
 
     def train_and_log():
@@ -87,17 +90,17 @@ if __name__ == '__main__':
     args.add_argument("--batch_size", type=int, default=8)
     args.add_argument("--sentence", type=str, default=None)
     args.add_argument("--path", type=str, default="coda-corpus")
+    args.add_argument("--test_architecture", action="store_true", help="test the model architecture (no training, just testing the")
 
     args = args.parse_args()
-    print(args.test)
     # Ensure deterministic behavior
     torch.backends.cudnn.deterministic = True
     torch.manual_seed(hash("a") % 2 ** 32 - 1)
     torch.cuda.manual_seed_all(hash("a") % 2 ** 32 - 1)
     PATH = args.path
 
-    if args.wandb:
-        wandb_log()
+    if args.test_architecture:
+        test_config()
         exit()
 
     arguments = {
@@ -109,7 +112,8 @@ if __name__ == '__main__':
         "optimizer": args.optimizer,
         "batch_size": args.batch_size,
         "test": args.test,
-        "sentence": args.sentence
+        "sentence": args.sentence,
+        "wandb": args.wandb
     }
 
     main(config=arguments)
