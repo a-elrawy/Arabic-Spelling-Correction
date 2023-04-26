@@ -3,8 +3,9 @@ import torch
 from utils import get_metrics
 from data_loader import unprep, preprocess
 
-class Trainer:
-    """Trainer class for SPA-GAN."""
+
+class SpellingChecker:
+    """SpellingChecker class"""
 
     def __init__(self, model, optimizer, criterion, dataloader, tokenizer):
         """Initialize the trainer.
@@ -21,10 +22,9 @@ class Trainer:
         self.dataloader = dataloader
         self.tokenizer = tokenizer
         self.model.to(self.device)
-        
+
     def encode(self, text):
         return self.tokenizer.batch_encode_plus(text, padding=True, return_tensors="pt")["input_ids"].to(self.device)
-
 
     def train_step(self):
         """Train the model for one step.
@@ -139,4 +139,112 @@ class Trainer:
         output_ids = self.model.generate(input_ids, max_length=47)
         return unprep(self.tokenizer.decode(output_ids[0], skip_special_tokens=True))
 
+# class for binay error rate
+class BERT2CER:
+    def __init__(self, model, optimizer, criterion, dataloader, tokenizer):
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.model = model
+        self.tokenizer = tokenizer
+        self.criterion = criterion
+        self.optimizer = optimizer
+        self.dataloader = dataloader
+        self.clasifier = torch.nn.Linear(768, 2)
+        self.model.to(self.device)
 
+    def encode(self, text):
+        return self.tokenizer.batch_encode_plus(text, padding=True, return_tensors="pt")["input_ids"].to(self.device)
+
+    def train_step(self):
+        self.model.train()
+        train_loss = 0.0
+        for input_batch, target_batch in self.dataloader:
+           # train for Bert
+            input_ids = self.encode(input_batch)
+            target_ids = self.encode(target_batch)
+            target_labels = [int(input_id == target_id) for input_id, target_id in zip(input_ids, target_ids)]
+            outputs = self.model(input_ids=input_ids, labels=target_ids)
+            last_hidden_state = outputs.last_hidden_state
+            pooled_output = last_hidden_state[:, 0]
+            logits = self.clasifier(pooled_output)
+            probs = torch.nn.functional.softmax(logits)
+            labels = probs.argmax(dim=1).tolist()
+            loss = self.criterion(labels, target_labels)
+            loss.backward()
+            self.optimizer.step()
+
+            train_loss += loss.item()
+
+        return train_loss / len(self.dataloader)
+
+    def evaluate(self, val_loader):
+        self.model.eval()
+        val_loss = 0.0
+        total_cer = 0.0
+        for input_batch, target_batch in val_loader:
+            input_ids = self.encode(input_batch)
+            target_ids = self.encode(target_batch)
+            target_labels = [int(input_id == target_id) for input_id, target_id in zip(input_ids, target_ids)]
+            outputs = self.model(input_ids=input_ids, labels=target_ids)
+            last_hidden_state = outputs.last_hidden_state
+            pooled_output = last_hidden_state[:, 0]
+            logits = self.clasifier(pooled_output)
+            probs = torch.nn.functional.softmax(logits)
+            labels = probs.argmax(dim=1).tolist()
+            loss = self.criterion(labels, target_labels)
+
+            # # Decode the predicted text
+            # predicted_ids = outputs.logits.argmax(dim=-1)
+            # predicted = self.tokenizer.batch_decode(predicted_ids, skip_special_tokens=True)
+            # target = self.tokenizer.batch_decode(target_ids, skip_special_tokens=True)
+
+            # Evaluate the performance of the model on the current batch
+            # total_cer += cer(predicted, target)
+            val_loss += loss.item()
+
+        num_batches = len(val_loader)
+        avg_cer = total_cer / num_batches
+        avg_val_loss = val_loss / num_batches
+
+        return avg_val_loss
+
+    def train(self, val_loader, num_epochs=10, wandb_log=False):
+        """Train the model.
+        Args:
+            val_loader: The dataloader to use for evaluation
+            num_epochs: Number of epochs to train for
+            wandb_log: Whether to log the training and validation loss to WandB
+        """
+
+        # To CUDA
+        self.model.to(self.device)
+
+        # Start training
+        for epoch in range(num_epochs):
+            start = time.time()
+            # Train the model for one epoch
+            train_loss = self.train_step()
+            total = time.time() - start
+
+            # Evaluate the model on the validation set
+            val_loss = self.evaluate(val_loader)
+            if wandb_log:
+                import wandb
+                wandb.log({
+                    "Epoch": epoch + 1,
+                    "Train Loss": train_loss,
+                    "Val Loss": val_loss,
+                })
+            # Log the training and validation loss to WandB
+            print(
+                f"Epoch {epoch + 1}: train_loss = {train_loss:.4f}, val_loss = {val_loss:.4f}, "
+                f"time taken = {total}")
+    #
+    # def cer(self, input_text, target_text):
+    #     input_ids = self.encode(input_text)
+    #     target_ids = self.encode(target_text)
+    #     outputs = self.model(input_ids=input_ids, decoder_input_ids=target_ids[:, :-1]).logits
+    #     predicted_ids = outputs.argmax(dim=-1)
+    #     predicted = self.tokenizer.batch_decode(predicted_ids, skip_special_tokens=True)
+    #     target = self.tokenizer.batch_decode(target_ids[:, 1:], skip_special_tokens=True)
+    #     return cer(predicted, target)
+    #

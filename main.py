@@ -1,7 +1,7 @@
 import torch
 from data_loader import get_loaders
 from model import load_model, create_optimizer
-from train import Trainer
+from train import SpellingChecker, BERT2CER
 import wandb
 import argparse
 
@@ -10,7 +10,7 @@ def main(config):
     # Load the model and tokenizer
     model_name=config['model_name']
     model_path = model_name.split('/')[-1]
-    model, tokenizer = load_model(model_name, num_layers=config['num_layers'],
+    model, tokenizer = load_model(model_name, num_layers=config['num_layers'], encoder_only=config['encoder_only'],
                                   hidden_size=config['hidden_size'], model_path=f"{model_path}.pt")
 
     # Set up the optimizer and loss function
@@ -22,7 +22,10 @@ def main(config):
         wandb.config.update(config)
     # Load the data loaders
     train_loader, val_loader, test_loader = get_loaders(path=PATH, batch_size=config['batch_size'], shuffle=True)
-    trainer = Trainer(model, optimizer, criterion, train_loader, tokenizer)
+    if config['encoder_only']:
+        trainer = BERT2CER(model, optimizer, criterion, train_loader, tokenizer)
+    else:
+        trainer = SpellingChecker(model, optimizer, criterion, train_loader, tokenizer)
 
     # Train model
     if config['test']:
@@ -54,7 +57,7 @@ def test_config():
 
         train_loader, val_loader, test_loader = get_loaders(path=PATH, batch_size=wconfig.batch_size, shuffle=True)
 
-        trainer = Trainer(model, optimizer, criterion, train_loader, tokenizer)
+        trainer = SpellingChecker(model, optimizer, criterion, train_loader, tokenizer)
         trainer.train(val_loader, num_epochs=wconfig.num_epochs, wandb_log=True)
         # torch.save(model.state_dict(), f"{wconfig.model_name}.pt")
 
@@ -95,7 +98,7 @@ if __name__ == '__main__':
     args.add_argument("--sentence", type=str, default=None)
     args.add_argument("--path", type=str, default="coda-corpus")
     args.add_argument("--test_architecture", action="store_true", help="test the model architecture (no training, just testing the")
-
+    args.add_argument("--encoder_only", action="store_true", help="use bert instead of bart")
     args = args.parse_args()
     # Ensure deterministic behavior
     torch.backends.cudnn.deterministic = True
@@ -117,7 +120,8 @@ if __name__ == '__main__':
         "batch_size": args.batch_size,
         "test": args.test,
         "sentence": args.sentence,
-        "wandb": args.wandb
+        "wandb": args.wandb,
+        "encoder_only": args.encoder_only
     }
 
     main(config=arguments)

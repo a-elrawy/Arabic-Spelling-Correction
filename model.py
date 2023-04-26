@@ -22,7 +22,7 @@ def create_optimizer(optimizer_name, learning_rate, parameters):
 
 
 def load_model(model_name, num_layers=None, hidden_size=None, model_path=None,
-               apply_lora=False):
+               apply_lora=False, encoder_only=False):
     """
     Load a pre-trained model and tokenizer.
 
@@ -36,16 +36,17 @@ def load_model(model_name, num_layers=None, hidden_size=None, model_path=None,
         The loaded model and tokenizer.
     """
     tokenizer = transformers.AutoTokenizer.from_pretrained(model_name)
+    default_model = transformers.AutoModel if encoder_only else transformers.AutoModelForSeq2SeqLM
 
     if num_layers is not None or hidden_size is not None:
-        config = transformers.AutoConfig.from_pretrained(model_name)
+        config = default_model.from_pretrained(model_name)
         if num_layers is not None:
             config.num_hidden_layers = num_layers
         if hidden_size is not None:
             config.hidden_size = hidden_size
-        model = transformers.AutoModelForSeq2SeqLM.from_config(config=config)
+        model = default_model.from_config(config=config)
     else:
-        model = transformers.AutoModelForSeq2SeqLM.from_pretrained(model_name)
+        model = default_model.from_pretrained(model_name)
 
     # if apply_lora:
     #     peft_config = LoraConfig(
