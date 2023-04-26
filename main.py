@@ -29,7 +29,11 @@ def main(config):
         if config['sentence']:
             print(trainer.corrected(config['sentence']))
         else:
-            trainer.evaluate(test_loader)
+            val_loss, char_acc, precision, recall, f1_score = trainer.evaluate(test_loader)
+            print(
+                f"val_loss = {val_loss:.4f}, "
+                f"char_acc = {char_acc:.4f}, precision = {precision:.4f}, recall = {recall:.4f}, "
+                f"f1_score = {f1_score:.4f}")
 
     else:
         trainer.train(val_loader, num_epochs=config['num_epochs'], wandb_log=config['wandb'])
@@ -82,8 +86,8 @@ if __name__ == '__main__':
     args.add_argument("--wandb", action="store_true")
     args.add_argument("--test", action="store_true")
     args.add_argument("--model_name", type=str, default="moussaKam/AraBART")
-    args.add_argument("--hidden_size", type=int, default=300)
-    args.add_argument("--num_layers", type=int, default=2)
+    args.add_argument("--hidden_size", type=int, default=None)
+    args.add_argument("--num_layers", type=int, default=None)
     args.add_argument("--learning_rate", type=float, default=0.00003)
     args.add_argument("--num_epochs", type=int, default=10)
     args.add_argument("--optimizer", type=str, default="adam")

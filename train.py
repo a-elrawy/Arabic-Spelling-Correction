@@ -1,7 +1,7 @@
 import time
 import torch
 from utils import get_metrics
-
+from data_loader import unprep, preprocess
 
 class Trainer:
     """Trainer class for SPA-GAN."""
@@ -20,7 +20,8 @@ class Trainer:
         self.criterion = criterion
         self.dataloader = dataloader
         self.tokenizer = tokenizer
-
+        self.model.to(self.device)
+        
     def encode(self, text):
         return self.tokenizer.batch_encode_plus(text, padding=True, return_tensors="pt")["input_ids"].to(self.device)
 
@@ -134,8 +135,8 @@ class Trainer:
         # torch.save(self.model.state_dict(), "model.pt")
 
     def corrected(self, input_text):
-        input_ids = self.tokenizer.encode(input_text, return_tensors="pt").to(self.device)
+        input_ids = self.tokenizer.encode(preprocess(input_text), return_tensors="pt").to(self.device)
         output_ids = self.model.generate(input_ids, max_length=47)
-        return self.tokenizer.decode(output_ids[0], skip_special_tokens=True)
+        return unprep(self.tokenizer.decode(output_ids[0], skip_special_tokens=True))
 
 

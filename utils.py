@@ -1,5 +1,10 @@
+from data_loader import unprep
+
 def get_metrics(predicted_batch, target_batch):
     # Compute character-level accuracy
+    predicted_batch = [unprep(text) for text in predicted_batch ]
+    target_batch = [unprep(text) for text in target_batch ]
+
     total_chars = sum(len(target) for target in target_batch)
     correct_chars = sum(1 for predicted, target in zip(predicted_batch, target_batch) for i in range(min(len(predicted), len(target))) if predicted[i] == target[i])
     char_accuracy = correct_chars / total_chars

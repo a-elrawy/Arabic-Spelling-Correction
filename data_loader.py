@@ -3,7 +3,14 @@ import os
 import pandas as pd
 import torch
 from torch.utils.data import Dataset
+from arabert import ArabertPreprocessor
 
+processor = ArabertPreprocessor(model_name='')
+def preprocess(text):
+  return processor.preprocess(text)
+
+def unprep(text):
+  return processor.unpreprocess(text)
 
 class CODAMADARADataset(Dataset):
     """CODA MADARA Dataset"""
@@ -23,8 +30,8 @@ class CODAMADARADataset(Dataset):
 
     def __getitem__(self, index):
         row = self.df.iloc[index]
-        x = row['raw']
-        y = row['CODA']
+        x = preprocess(row['raw'])
+        y = preprocess(row['CODA'])
         return x, y
 
 
@@ -40,3 +47,4 @@ def get_loaders(path="coda-corpus", batch_size=8, shuffle=True):
 
     test_loader = torch.utils.data.DataLoader(test_dataset, batch_size=batch_size, shuffle=shuffle)
     return train_loader, val_loader, test_loader
+

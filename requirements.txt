@@ -3,3 +3,4 @@ sentencepiece==0.1.98
 torch==2.0.0
 transformers==4.27.4
 wandb==0.15.0
+arabert
