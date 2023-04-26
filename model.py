@@ -39,7 +39,7 @@ def load_model(model_name, num_layers=None, hidden_size=None, model_path=None,
     default_model = transformers.AutoModel if encoder_only else transformers.AutoModelForSeq2SeqLM
 
     if num_layers is not None or hidden_size is not None:
-        config = default_model.from_pretrained(model_name)
+        config = transformers.AutoConfig.from_pretrained(model_name)
         if num_layers is not None:
             config.num_hidden_layers = num_layers
         if hidden_size is not None:
