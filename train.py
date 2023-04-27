@@ -148,27 +148,48 @@ class BERT2CER:
         self.criterion = criterion
         self.optimizer = optimizer
         self.dataloader = dataloader
-        self.clasifier = torch.nn.Linear(768, 2)
+        self.classifier = torch.nn.Linear(768, 1)
         self.model.to(self.device)
+        self.classifier.to(self.device)
+        self.sigmoid = torch.nn.Sigmoid()
+        self.criterion = torch.nn.BCELoss()
 
     def encode(self, text):
-        return self.tokenizer.batch_encode_plus(text, padding=True, return_tensors="pt")["input_ids"].to(self.device)
+        return self.tokenizer.batch_encode_plus(preprocess(text), padding=True, return_tensors="pt")["input_ids"].to(self.device)
 
     def train_step(self):
         self.model.train()
         train_loss = 0.0
         for input_batch, target_batch in self.dataloader:
-           # train for Bert
+            self.optimizer.zero_grad()
+
+            # train for Bert
             input_ids = self.encode(input_batch)
+            attention_mask = self.tokenizer.batch_encode_plus(input_batch, padding=True, return_tensors="pt")[
+                'attention_mask'].to(self.device)
             target_ids = self.encode(target_batch)
-            target_labels = [int(input_id == target_id) for input_id, target_id in zip(input_ids, target_ids)]
-            outputs = self.model(input_ids=input_ids, labels=target_ids)
-            last_hidden_state = outputs.last_hidden_state
-            pooled_output = last_hidden_state[:, 0]
-            logits = self.clasifier(pooled_output)
-            probs = torch.nn.functional.softmax(logits)
-            labels = probs.argmax(dim=1).tolist()
-            loss = self.criterion(labels, target_labels)
+
+            outputs = self.model(input_ids, attention_mask)
+            hidden_states = outputs.last_hidden_state
+            logits = self.classifier(hidden_states)
+            logits = self.sigmoid(logits)
+
+            # Squeeze the logits to remove the extra dimension
+            logits = logits.squeeze(-1)
+
+            # Calculate the labels for the batch
+            labels = []
+            for raw_tokens, corrected_tokens in zip(input_ids, target_ids):
+                batch_labels = [0] * len(raw_tokens)
+                for token in corrected_tokens:
+                    if token in raw_tokens:
+                        index = torch.where(raw_tokens == token)[0][0]
+                        batch_labels[index] = 1
+
+                labels.append(batch_labels)
+
+            labels = torch.tensor(labels, dtype=torch.float32).to(self.device)
+            loss = self.criterion(logits, labels)
             loss.backward()
             self.optimizer.step()
 
@@ -182,17 +203,33 @@ class BERT2CER:
         val_loss, total_char_acc, total_precision, total_recall, total_f1_score = 0.0, 0.0, 0.0, 0.0, 0.0
         for input_batch, target_batch in val_loader:
             input_ids = self.encode(input_batch)
+            attention_mask = self.tokenizer.batch_encode_plus(input_batch, padding=True, return_tensors="pt")[
+                'attention_mask'].to(self.device)
             target_ids = self.encode(target_batch)
-            target_labels = [int(input_id == target_id) for input_id, target_id in zip(input_ids, target_ids)]
-            outputs = self.model(input_ids=input_ids, labels=target_ids)
-            last_hidden_state = outputs.last_hidden_state
-            pooled_output = last_hidden_state[:, 0]
-            logits = self.clasifier(pooled_output)
-            probs = torch.nn.functional.softmax(logits)
-            labels = probs.argmax(dim=1).tolist()
-            loss = self.criterion(labels, target_labels)
 
-            char_acc, precision, recall, f1_scores = self.metrics(labels, target_labels)
+            outputs = self.model(input_ids, attention_mask)
+            hidden_states = outputs.last_hidden_state
+            logits = self.classifier(hidden_states)
+            logits = self.sigmoid(logits)
+
+            # Squeeze the logits to remove the extra dimension
+            logits = logits.squeeze(-1)
+
+            # Calculate the labels for the batch
+            labels = []
+            for raw_tokens, corrected_tokens in zip(input_ids, target_ids):
+                batch_labels = [0] * len(raw_tokens)
+                for token in corrected_tokens:
+                    if token in raw_tokens:
+                        index = torch.where(raw_tokens == token)[0][0]
+                        batch_labels[index] = 1
+
+                labels.append(batch_labels)
+
+            labels = torch.tensor(labels, dtype=torch.float32).to(self.device)
+            loss = self.criterion(logits, labels)
+
+            char_acc, precision, recall, f1_scores = self.metrics(logits, labels)
             total_char_acc += char_acc
             total_precision += precision
             total_recall += recall
