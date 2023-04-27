@@ -323,5 +323,8 @@ class BERT2CER:
     #     return cer(predicted, target)
     #
     def metrics(self, labels, target_labels):
-        return accuracy_score(labels, target_labels), precision_score(labels, target_labels),\
-               recall_score(labels, target_labels), f1_score(labels, target_labels)
+        accuracy = sum(accuracy_score(label, target_label) for label, target_label in zip(labels, target_labels)) / len(labels)
+        precision = sum(precision_score(label, target_label) for label, target_label in zip(labels, target_labels)) / len(labels)
+        recall = sum(recall_score(label, target_label) for label, target_label in zip(labels, target_labels)) / len(labels)
+        f1_scores = sum(f1_score(label, target_label) for label, target_label in zip(labels, target_labels)) / len(labels)
+        return accuracy, precision, recall, f1_scores
