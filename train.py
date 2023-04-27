@@ -155,7 +155,7 @@ class BERT2CER:
         self.criterion = torch.nn.BCELoss()
 
     def encode(self, text):
-        return self.tokenizer.batch_encode_plus(preprocess(text), padding=True, return_tensors="pt")["input_ids"].to(self.device)
+        return self.tokenizer.batch_encode_plus(text, padding=True, return_tensors="pt")["input_ids"].to(self.device)
 
     def train_step(self):
         self.model.train()
