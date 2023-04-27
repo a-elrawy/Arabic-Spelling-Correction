@@ -2,7 +2,7 @@ import time
 import torch
 from utils import get_metrics
 from data_loader import unprep, preprocess
-
+from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
 
 class SpellingChecker:
     """SpellingChecker class"""
@@ -114,7 +114,7 @@ class SpellingChecker:
             total = time.time() - start
 
             # Evaluate the model on the validation set
-            val_loss, char_acc, precision, recall, f1_score = self.evaluate(val_loader)
+            val_loss, char_acc, precision, recall, f1_scores = self.evaluate(val_loader)
             if wandb_log:
                 import wandb
                 wandb.log({
@@ -124,13 +124,13 @@ class SpellingChecker:
                     "Char Accuracy": char_acc,
                     "Precision": precision,
                     "Recall": recall,
-                    "F1 Score": f1_score,
+                    "F1 Score": f1_scores,
                 })
             # Log the training and validation loss to WandB
             print(
                 f"Epoch {epoch + 1}: train_loss = {train_loss:.4f}, val_loss = {val_loss:.4f}, "
                 f"char_acc = {char_acc:.4f}, precision = {precision:.4f}, recall = {recall:.4f}, "
-                f"f1_score = {f1_score:.4f}, time taken = {total}")
+                f"f1_score = {f1_scores:.4f}, time taken = {total}")
         # Save the trained model
         # torch.save(self.model.state_dict(), "model.pt")
 
@@ -178,8 +178,8 @@ class BERT2CER:
 
     def evaluate(self, val_loader):
         self.model.eval()
-        val_loss = 0.0
-        total_cer = 0.0
+
+        val_loss, total_char_acc, total_precision, total_recall, total_f1_score = 0.0, 0.0, 0.0, 0.0, 0.0
         for input_batch, target_batch in val_loader:
             input_ids = self.encode(input_batch)
             target_ids = self.encode(target_batch)
@@ -192,20 +192,22 @@ class BERT2CER:
             labels = probs.argmax(dim=1).tolist()
             loss = self.criterion(labels, target_labels)
 
-            # # Decode the predicted text
-            # predicted_ids = outputs.logits.argmax(dim=-1)
-            # predicted = self.tokenizer.batch_decode(predicted_ids, skip_special_tokens=True)
-            # target = self.tokenizer.batch_decode(target_ids, skip_special_tokens=True)
-
-            # Evaluate the performance of the model on the current batch
-            # total_cer += cer(predicted, target)
+            char_acc, precision, recall, f1_scores = self.metrics(labels, target_labels)
+            total_char_acc += char_acc
+            total_precision += precision
+            total_recall += recall
+            total_f1_score += f1_scores
             val_loss += loss.item()
 
         num_batches = len(val_loader)
-        avg_cer = total_cer / num_batches
+        avg_char_acc = total_char_acc / num_batches
+        avg_precision = total_precision / num_batches
+        avg_recall = total_recall / num_batches
+        avg_f1_score = total_f1_score / num_batches
         avg_val_loss = val_loss / num_batches
 
-        return avg_val_loss
+        return avg_val_loss, avg_char_acc, avg_precision, avg_recall, avg_f1_score
+
 
     def train(self, val_loader, num_epochs=10, wandb_log=False):
         """Train the model.
@@ -248,3 +250,6 @@ class BERT2CER:
     #     target = self.tokenizer.batch_decode(target_ids[:, 1:], skip_special_tokens=True)
     #     return cer(predicted, target)
     #
+    def metrics(self, labels, target_labels):
+        return accuracy_score(labels, target_labels), precision_score(labels, target_labels),\
+               recall_score(labels, target_labels), f1_score(labels, target_labels)
