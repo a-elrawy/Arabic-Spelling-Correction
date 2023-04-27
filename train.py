@@ -229,7 +229,7 @@ class BERT2CER:
             labels = torch.tensor(labels, dtype=torch.float32).to(self.device)
             loss = self.criterion(logits, labels)
 
-            char_acc, precision, recall, f1_scores = self.metrics(logits.de.cpu(), labels.cpu())
+            char_acc, precision, recall, f1_scores = self.metrics(logits, labels)
             total_char_acc += char_acc
             total_precision += precision
             total_recall += recall
