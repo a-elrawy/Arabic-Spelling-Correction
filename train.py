@@ -300,28 +300,25 @@ class BERT2CER:
             total = time.time() - start
 
             # Evaluate the model on the validation set
-            val_loss = self.evaluate(val_loader)
+            val_loss, val_char_acc, val_precision, val_recall, val_f1_score = self.evaluate(val_loader)
+
+            # Log the results to WandB
             if wandb_log:
                 import wandb
-                wandb.log({
-                    "Epoch": epoch + 1,
-                    "Train Loss": train_loss,
-                    "Val Loss": val_loss,
-                })
-            # Log the training and validation loss to WandB
-            print(
-                f"Epoch {epoch + 1}: train_loss = {train_loss:.4f}, val_loss = {val_loss:.4f}, "
-                f"time taken = {total}")
-    #
-    # def cer(self, input_text, target_text):
-    #     input_ids = self.encode(input_text)
-    #     target_ids = self.encode(target_text)
-    #     outputs = self.model(input_ids=input_ids, decoder_input_ids=target_ids[:, :-1]).logits
-    #     predicted_ids = outputs.argmax(dim=-1)
-    #     predicted = self.tokenizer.batch_decode(predicted_ids, skip_special_tokens=True)
-    #     target = self.tokenizer.batch_decode(target_ids[:, 1:], skip_special_tokens=True)
-    #     return cer(predicted, target)
-    #
+                wandb.log({"train_loss": train_loss, "val_loss": val_loss,
+                           "val_char_acc": val_char_acc, "val_precision": val_precision, "val_recall": val_recall,
+                           "val_f1_score": val_f1_score})
+
+            # Print the results
+            print(f"Epoch {epoch + 1} of {num_epochs} took {total:.3f}s")
+            print(f"  training loss (in-iteration): \t{train_loss:.6f}")
+            print(f"  validation loss: \t\t\t{val_loss:.6f}")
+            print(f"  validation char accuracy: \t\t{val_char_acc:.6f}")
+            print(f"  validation precision: \t\t{val_precision:.6f}")
+            print(f"  validation recall: \t\t\t{val_recall:.6f}")
+            print(f"  validation f1 score: \t\t{val_f1_score:.6f}")
+
+
     def metrics(self, labels, target_labels):
         labels = [[(x >= 0.5) for x in label] for label in labels]
         accuracy = sum(accuracy_score(label, target_label) for label, target_label in zip(labels, target_labels)) / len(labels)
