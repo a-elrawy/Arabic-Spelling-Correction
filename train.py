@@ -78,7 +78,7 @@ class SpellingChecker:
                 target = self.tokenizer.batch_decode(target_ids[:, 1:], skip_special_tokens=True)
 
                 # Evaluate the performance of the model on the current batch
-                char_acc, precision, recall, f1_score = self.metrics(predicted, target)
+                char_acc, precision, recall, f1_score = self.metrics(predicted.detach().cpu(), target.detach().cpu())
                 total_char_acc += char_acc
                 total_precision += precision
                 total_recall += recall
