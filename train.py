@@ -79,7 +79,7 @@ class SpellingChecker:
                 target = self.tokenizer.batch_decode(target_ids[:, 1:], skip_special_tokens=True)
 
                 # Evaluate the performance of the model on the current batch
-                char_acc, precision, recall, f1_score = get_metrics(predicted, target)
+                char_acc, precision, recall, f1_score = self.metrics(predicted, target)
                 total_char_acc += char_acc
                 total_precision += precision
                 total_recall += recall
@@ -138,6 +138,42 @@ class SpellingChecker:
         input_ids = self.tokenizer.encode(preprocess(input_text), return_tensors="pt").to(self.device)
         output_ids = self.model.generate(input_ids, max_length=47)
         return unprep(self.tokenizer.decode(output_ids[0], skip_special_tokens=True))
+
+    def metrics(self, predicted_batch, target_batch):
+        # Compute character-level accuracy
+        predicted_batch = [unprep(text) for text in predicted_batch]
+        target_batch = [unprep(text) for text in target_batch]
+
+        total_chars = sum(len(target) for target in target_batch)
+        correct_chars = sum(1 for predicted, target in zip(predicted_batch, target_batch) for i in
+                            range(min(len(predicted), len(target))) if predicted[i] == target[i])
+        char_accuracy = correct_chars / total_chars
+
+        # Compute precision, recall, and F1-score for the entire batch
+        predicted_words_batch = [predicted.split() for predicted in predicted_batch]
+        target_words_batch = [target.split() for target in target_batch]
+
+        tp = 0
+        fp = 0
+        fn = 0
+
+        for predicted_words, target_words in zip(predicted_words_batch, target_words_batch):
+            # Compute true positives
+            tp += sum(1 for word in predicted_words if word in target_words)
+
+            # Compute false positives
+            fp += sum(1 for word in predicted_words if word not in target_words)
+
+            # Compute false negatives
+            fn += sum(1 for word in target_words if word not in predicted_words)
+
+        precision = tp / (tp + fp)
+        recall = 0 if tp + fn == 0 else tp / (tp + fn)
+        f1_score = 0 if precision + recall == 0 else \
+            2 * precision * recall / (precision + recall)
+
+        return char_accuracy, precision, recall, f1_score
+
 
 # class for binay error rate
 class BERT2CER:
@@ -288,5 +324,8 @@ class BERT2CER:
     #     return cer(predicted, target)
     #
     def metrics(self, labels, target_labels):
-        return binary_accuracy(labels, target_labels), binary_precision(labels, target_labels), \
-               binary_recall(labels, target_labels), binary_f1_score(labels, target_labels)
+        accuracy = sum(binary_accuracy(label, target_label) for label, target_label in zip(labels, target_labels)) / len(labels)
+        precision = sum(binary_precision(label, target_label) for label, target_label in zip(labels, target_labels)) / len(labels)
+        recall = sum(binary_recall(label, target_label) for label, target_label in zip(labels, target_labels)) / len(labels)
+        f1_score = sum(binary_f1_score(label, target_label) for label, target_label in zip(labels, target_labels)) / len(labels)
+        return accuracy, precision, recall, f1_score
