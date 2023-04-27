@@ -1,6 +1,5 @@
 import time
 import torch
-from utils import get_metrics
 from data_loader import unprep, preprocess
 from torcheval.metrics.functional import binary_f1_score, binary_precision, binary_recall, binary_accuracy
 
