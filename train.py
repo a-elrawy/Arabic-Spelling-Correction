@@ -300,23 +300,24 @@ class BERT2CER:
             total = time.time() - start
 
             # Evaluate the model on the validation set
-            val_loss, val_char_acc, val_precision, val_recall, val_f1_score = self.evaluate(val_loader)
+            val_loss, char_acc, precision, recall, f1_scores = self.evaluate(val_loader)
 
-            # Log the results to WandB
             if wandb_log:
                 import wandb
-                wandb.log({"train_loss": train_loss, "val_loss": val_loss,
-                           "val_char_acc": val_char_acc, "val_precision": val_precision, "val_recall": val_recall,
-                           "val_f1_score": val_f1_score})
-
-            # Print the results
-            print(f"Epoch {epoch + 1} of {num_epochs} took {total:.3f}s")
-            print(f"  training loss (in-iteration): \t{train_loss:.6f}")
-            print(f"  validation loss: \t\t\t{val_loss:.6f}")
-            print(f"  validation char accuracy: \t\t{val_char_acc:.6f}")
-            print(f"  validation precision: \t\t{val_precision:.6f}")
-            print(f"  validation recall: \t\t\t{val_recall:.6f}")
-            print(f"  validation f1 score: \t\t{val_f1_score:.6f}")
+                wandb.log({
+                    "Epoch": epoch + 1,
+                    "Train Loss": train_loss,
+                    "Val Loss": val_loss,
+                    "Char Accuracy": char_acc,
+                    "Precision": precision,
+                    "Recall": recall,
+                    "F1 Score": f1_scores,
+                })
+            # Log the training and validation loss to WandB
+            print(
+                f"Epoch {epoch + 1}: train_loss = {train_loss:.4f}, val_loss = {val_loss:.4f}, "
+                f"char_acc = {char_acc:.4f}, precision = {precision:.4f}, recall = {recall:.4f}, "
+                f"f1_score = {f1_scores:.4f}, time taken = {total}")
 
 
     def metrics(self, labels, target_labels):
