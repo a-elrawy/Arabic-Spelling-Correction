@@ -2,7 +2,7 @@ import time
 import torch
 from utils import get_metrics
 from data_loader import unprep, preprocess
-from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
+from torcheval.metrics.functional import binary_f1_score, binary_precision, binary_recall, binary_accuracy
 
 class SpellingChecker:
     """SpellingChecker class"""
@@ -229,7 +229,7 @@ class BERT2CER:
             labels = torch.tensor(labels, dtype=torch.float32).to(self.device)
             loss = self.criterion(logits, labels)
 
-            char_acc, precision, recall, f1_scores = self.metrics(logits.cpu(), labels.cpu())
+            char_acc, precision, recall, f1_scores = self.metrics(logits.de.cpu(), labels.cpu())
             total_char_acc += char_acc
             total_precision += precision
             total_recall += recall
@@ -288,5 +288,5 @@ class BERT2CER:
     #     return cer(predicted, target)
     #
     def metrics(self, labels, target_labels):
-        return accuracy_score(labels, target_labels), precision_score(labels, target_labels),\
-               recall_score(labels, target_labels), f1_score(labels, target_labels)
+        return binary_accuracy(labels, target_labels), binary_precision(labels, target_labels), \
+               binary_recall(labels, target_labels), binary_f1_score(labels, target_labels)
