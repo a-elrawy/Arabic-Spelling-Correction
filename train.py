@@ -75,7 +75,8 @@ class SpellingChecker:
                 predicted_ids = outputs.argmax(dim=-1)
 
                 # Evaluate the performance of the model on the current batch
-                char_acc, precision, recall, f1_score = self.metrics(predicted_ids, target_ids[:, 1:])
+                char_acc, precision, recall, f1_score = self.metrics(predicted_ids.detach().cpu(),
+                                                                     target_ids[:, 1:].detach().cpu())
                 total_char_acc += char_acc
                 total_precision += precision
                 total_recall += recall
@@ -133,6 +134,7 @@ class SpellingChecker:
         output_ids = self.model.generate(input_ids, max_length=47)
         return unprep(self.tokenizer.decode(output_ids[0], skip_special_tokens=True))
 
+    @torch.no_grad()
     def metrics(self, labels, target_labels):
         accuracy = sum(accuracy_score(label, target_label) for label, target_label in zip(labels, target_labels)) / len(labels)
         precision = sum(precision_score(label, target_label) for label, target_label in zip(labels, target_labels)) / len(labels)
@@ -285,7 +287,7 @@ class BERT2CER:
                 f"char_acc = {char_acc:.4f}, precision = {precision:.4f}, recall = {recall:.4f}, "
                 f"f1_score = {f1_scores:.4f}, time taken = {total}")
 
-
+    @torch.no_grad()
     def metrics(self, labels, target_labels):
         labels = [[int(x >= 0.5) for x in label] for label in labels]
         accuracy = sum(accuracy_score(label, target_label) for label, target_label in zip(labels, target_labels)) / len(labels)
