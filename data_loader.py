@@ -42,6 +42,7 @@ def get_loaders(path="coda-corpus", batch_size=8, shuffle=True):
     train_size = int(len(train_dataset) * 0.8)
     splits = torch.utils.data.random_split(train_dataset,
                                            [train_size, len(train_dataset)-train_size])
+
     train_loader = torch.utils.data.DataLoader(splits[0], batch_size=batch_size, shuffle=shuffle)
     val_loader = torch.utils.data.DataLoader(splits[1], batch_size=batch_size, shuffle=shuffle)
 

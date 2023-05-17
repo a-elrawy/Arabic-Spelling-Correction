@@ -8,7 +8,7 @@ import argparse
 
 def main(config):
     # Load the model and tokenizer
-    model_name=config['model_name']
+    model_name = config['model_name']
     model_path = model_name.split('/')[-1]
     model, tokenizer = load_model(model_name, num_layers=config['num_layers'], encoder_only=config['encoder_only'],
                                   hidden_size=config['hidden_size'], model_path=f"{model_path}.pt")
@@ -20,8 +20,10 @@ def main(config):
     if config['wandb']:
         wandb.init(project='CODA-conversion')
         wandb.config.update(config)
+
     # Load the data loaders
     train_loader, val_loader, test_loader = get_loaders(path=PATH, batch_size=config['batch_size'], shuffle=True)
+
     if config['encoder_only']:
         trainer = BERT2CER(model, optimizer, criterion, train_loader, tokenizer)
     else:
