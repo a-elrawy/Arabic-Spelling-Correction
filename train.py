@@ -136,10 +136,15 @@ class SpellingChecker:
 
     @torch.no_grad()
     def metrics(self, labels, target_labels):
-        accuracy = sum(accuracy_score(label, target_label) for label, target_label in zip(labels, target_labels)) / len(labels)
-        precision = sum(precision_score(label, target_label) for label, target_label in zip(labels, target_labels)) / len(labels)
-        recall = sum(recall_score(label, target_label) for label, target_label in zip(labels, target_labels)) / len(labels)
-        f1_scores = sum(f1_score(label, target_label) for label, target_label in zip(labels, target_labels)) / len(labels)
+        accuracy = sum(accuracy_score(label, target_label)
+                       for label, target_label in zip(labels, target_labels)) / len(labels)
+        precision = sum(precision_score(label, target_label, average='micro')
+                        for label, target_label in zip(labels, target_labels)) / len(labels)
+        recall = sum(recall_score(label, target_label, average='micro')
+                     for label, target_label in zip(labels, target_labels)) / len(labels)
+        f1_scores = sum(f1_score(label, target_label, average='micro')
+                        for label, target_label in zip(labels, target_labels)) / len(labels)
+
         return accuracy, precision, recall, f1_scores
 
 # class for binay error rate
